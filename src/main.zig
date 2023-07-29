@@ -31,8 +31,9 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
+
     //var mw: ?*magick_wand.MagickWand = null;
-    //std.debug.print("The wand is {} \n", .{@typeInfo(magick_wand)});
+    //magick_wand.MagickWandGenesis();
     //mw = magick_wand.NewMagickWand();
 
     //setup the tesseract api handle
@@ -45,11 +46,14 @@ pub fn main() !void {
     const input_image = "./test_image_arabic.png";
     const timeout_ms: c_int = 5000;
     const retry_config: ?*const u8 = null;
+    const tessdata_path = "/opt/local/share/tessdata/";
+    const output_path = "./data-out/output";
+    const text_only = 0; //aka false
     //read in an image as pixel data
     const image: *Pix = try pixRead(allocator, input_image);
     //convert image to text data
     TessBaseAPISetImage2(api.?, @as(?*Pix, image));
-    const renderer = tesseract.TessPDFRendererCreate("./data-out/output", "/opt/local/share/tessdata/", 0); //zero is important so we make the text appear visible
+    const renderer = tesseract.TessPDFRendererCreate(output_path, tessdata_path, text_only); //zero is important so we make the text appear visible
 
     _ = tesseract.TessBaseAPIProcessPages(api, input_image, retry_config, timeout_ms, renderer);
 
