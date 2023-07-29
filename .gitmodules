@@ -1,0 +1,6 @@
+[submodule "deps/enhancing-tesseract-arabic-text-recognition"]
+	path = deps/enhancing-tesseract-arabic-text-recognition
+	url = https://github.com/ClearCypher/enhancing-tesseract-arabic-text-recognition.git
+[submodule "deps/tesseract"]
+	path = deps/tesseract
+	url = https://github.com/tesseract-ocr/tesseract.git

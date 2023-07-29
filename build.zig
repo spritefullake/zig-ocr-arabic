@@ -36,6 +36,7 @@ pub fn build(b: *std.Build) void {
     //
     // export TESSDATA_PREFIX="/opt/homebrew/Cellar/tesseract-lang/4.1.0/share/tessdata"
     // export TESSDATA_PREFIX=/opt/local/share/tessdata (for macports)
+    //github for arabic data: https://github.com/ClearCypher/enhancing-tesseract-arabic-text-recognition.git
     //interesting research paper on improving arabic ocr https://www.researchgate.net/publication/372507862_Advancing_Arabic_Text_Recognition_Fine-tuning_of_the_LSTM_Model_in_Tesseract_OCR?channel=doi&linkId=64bb096a8de7ed28bab5fe3b&showFulltext=true
 
     exe.linkLibC();
