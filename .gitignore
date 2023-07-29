@@ -2,3 +2,4 @@ archive/
 zig-cache/
 zig-out/
 data-out/
+.DS_Store
