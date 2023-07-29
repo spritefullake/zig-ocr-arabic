@@ -46,7 +46,6 @@ pub fn main() !void {
     const image: *Pix = try pixRead(allocator, "./test_image_arabic.png");
     //convert image to text data
     TessBaseAPISetImage2(api.?, @as(?*Pix, image));
-    const out_text: [*c]const u8 = tesseract.TessBaseAPIGetUTF8Text(api.?);
     const renderer = tesseract.TessPDFRendererCreate("./data-out/output", "/opt/local/share/tessdata/", 0); //zero is important so we make the text appear visible
     _ = tesseract.TessResultRendererBeginDocument(renderer, "my_doc");
     _ = tesseract.TessResultRendererAddImage(renderer, api.?);
@@ -56,8 +55,6 @@ pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
-
-    try stdout.print("The out text is {s}\n", .{out_text});
 
     try stdout.print("Run `zig build test` to run the tests.\n", .{});
 
