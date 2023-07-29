@@ -1,1 +1,4 @@
 archive/
+zig-cache/
+zig-out/
+data-out/
