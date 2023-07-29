@@ -42,14 +42,16 @@ pub fn main() !void {
     defer tesseract.TessBaseAPIDelete(api.?);
     defer tesseract.TessBaseAPIEnd(api.?);
 
+    const input_image = "./test_image_arabic.png";
+    const timeout_ms: c_int = 5000;
+    const retry_config: ?*const u8 = null;
     //read in an image as pixel data
-    const image: *Pix = try pixRead(allocator, "./test_image_arabic.png");
+    const image: *Pix = try pixRead(allocator, input_image);
     //convert image to text data
     TessBaseAPISetImage2(api.?, @as(?*Pix, image));
     const renderer = tesseract.TessPDFRendererCreate("./data-out/output", "/opt/local/share/tessdata/", 0); //zero is important so we make the text appear visible
-    _ = tesseract.TessResultRendererBeginDocument(renderer, "my_doc");
-    _ = tesseract.TessResultRendererAddImage(renderer, api.?);
-    _ = tesseract.TessResultRendererEndDocument(renderer);
+
+    _ = tesseract.TessBaseAPIProcessPages(api, input_image, retry_config, timeout_ms, renderer);
 
     //setup printing
     const stdout_file = std.io.getStdOut().writer();
