@@ -71,6 +71,17 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
 
+    // const build_tesseract = b.addSystemCommand(
+    //  &[_][]const u8{
+    //     "make",
+    //     "-C",
+    //     "./libs/cmark",
+    // },
+    //);
+
+    //const make_step = b.step("tesseract", "Build tesseract");
+    //make_step.dependOn(&build_tesseract.step);
+
     //add the enviroment variable
     //
     // export TESSDATA_PREFIX="/opt/homebrew/Cellar/tesseract-lang/4.1.0/share/tessdata"
@@ -79,23 +90,35 @@ pub fn build(b: *std.Build) !void {
     //interesting research paper on improving arabic ocr https://www.researchgate.net/publication/372507862_Advancing_Arabic_Text_Recognition_Fine-tuning_of_the_LSTM_Model_in_Tesseract_OCR?channel=doi&linkId=64bb096a8de7ed28bab5fe3b&showFulltext=true
 
     exe.linkLibC();
+    exe.addSystemIncludePath("/usr/local/include");
+    exe.addLibraryPath("/usr/local/lib");
+    exe.linkSystemLibrary("tesseract");
+    exe.linkSystemLibrary("leptonica");
 
+    exe.addSystemIncludePath("/opt/local/include/");
+    exe.addLibraryPath("/opt/local/lib");
+
+    //b.vcpkg_root = std.Build.VcpkgRoot{ .found = "./vcpkg" };
     //exe.addIncludePath("./vcpkg/installed/arm64-osx/include");
     //exe.addLibraryPath("./vcpkg/installed/arm64-osx/lib");
+    //exe.addIncludePath("vcpkg/installed/x64-osx/include");
+    //exe.addLibraryPath("vcpkg/installed/x64-osx/lib");
+    //exe.linkSystemLibrary("tesseract");
+    //exe.linkSystemLibrary("leptonica");
 
     //exe.addIncludePath("./deps/tesseract/include");
     //exe.addLibraryPath("./deps/tesseract/src");
     //exe.addIncludePath("./deps/leptonica/src");
     //exe.addLibraryPath("./deps/leptonica/src");
-    exe.linkSystemLibrary("tesseract");
+    //exe.linkSystemLibrary("tesseract");
     //exe.addLibraryPath("./deps/tesseract/lib");
     //exe.linkSystemLibrary("tesseract"); //linking tesseract system library works!!!
     //exe.addSystemIncludePath("/opt/homebrew/Cellar/leptonica/1.82.0_2/include/");
     //exe.addLibraryPath("/opt/homebrew/Cellar/leptonica/1.82.0_2/lib/");
     //exe.linkSystemLibrary("leptonica");
 
-    exe.addSystemIncludePath("/opt/local/include/"); //macport paths
-    exe.addLibraryPath("/opt/local/lib"); //macport paths
+    //exe.addSystemIncludePath("/opt/local/include/"); //macport paths
+    //exe.addLibraryPath("/opt/local/lib"); //macport paths
     //exe.addSystemIncludePath("/opt/local/include");
 
     //exe.addSystemIncludePath("/opt/homebrew/Cellar/imagemagick/7.1.1-14/include/");

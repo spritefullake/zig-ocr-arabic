@@ -9,17 +9,17 @@ const magick_wand = @cImport({
     @cInclude("MagickWand/MagickWand.h");
 });
 const LeptonicaErrors = error{FileNotRead};
-const Pix = @TypeOf(leptonica.pixRead("example string"));
+const Pix = @TypeOf(leptonica.pixRead("example string").*);
 
 pub fn pixRead(allocator: std.mem.Allocator, file_path: []const u8) !*Pix {
     const c_string: [*c]const u8 = @ptrCast(file_path);
-    const result: Pix = leptonica.pixRead(c_string);
+    const result: [*c]Pix = leptonica.pixRead(c_string);
     if (result == null) {
         return LeptonicaErrors.FileNotRead;
     } else {
         const image: *Pix = try allocator.create(Pix);
         defer allocator.destroy(image);
-        image.* = result.?;
+        image.* = result.*;
         return image;
     }
 }
