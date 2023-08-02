@@ -90,13 +90,22 @@ pub fn build(b: *std.Build) !void {
     //interesting research paper on improving arabic ocr https://www.researchgate.net/publication/372507862_Advancing_Arabic_Text_Recognition_Fine-tuning_of_the_LSTM_Model_in_Tesseract_OCR?channel=doi&linkId=64bb096a8de7ed28bab5fe3b&showFulltext=true
 
     exe.linkLibC();
-    exe.addSystemIncludePath("/usr/local/include");
-    exe.addLibraryPath("/usr/local/lib");
+    exe.addSystemIncludePath("deps/tesseract/include");
+    exe.addLibraryPath("deps/tesseract/src");
     exe.linkSystemLibrary("tesseract");
+
+    //exe.addSystemIncludePath("deps/leptonica/src");
+    //exe.addLibraryPath("deps/leptonica/src");
     exe.linkSystemLibrary("leptonica");
 
-    exe.addSystemIncludePath("/opt/local/include/");
-    exe.addLibraryPath("/opt/local/lib");
+    // exe.linkSystemLibrary("magick");
+    exe.linkSystemLibrary("MagickWand");
+
+    exe.linkSystemLibrary("MagickCore");
+    //exe.addObjectFile("/usr/local/lib/libMagickWand-7.Q16HDRI.la");
+    //exe.linkSystemLibrary("libMagickWand-7");
+    //exe.addSystemIncludePath("/opt/local/include/");
+    //exe.addLibraryPath("/opt/local/lib");
 
     //b.vcpkg_root = std.Build.VcpkgRoot{ .found = "./vcpkg" };
     //exe.addIncludePath("./vcpkg/installed/arm64-osx/include");
@@ -117,8 +126,8 @@ pub fn build(b: *std.Build) !void {
     //exe.addLibraryPath("/opt/homebrew/Cellar/leptonica/1.82.0_2/lib/");
     //exe.linkSystemLibrary("leptonica");
 
-    //exe.addSystemIncludePath("/opt/local/include/"); //macport paths
-    //exe.addLibraryPath("/opt/local/lib"); //macport paths
+    exe.addSystemIncludePath("/opt/local/include/"); //macport paths
+    exe.addLibraryPath("/opt/local/lib"); //macport paths
     //exe.addSystemIncludePath("/opt/local/include");
 
     //exe.addSystemIncludePath("/opt/homebrew/Cellar/imagemagick/7.1.1-14/include/");
