@@ -46,22 +46,6 @@ pub fn build(b: *std.Build) !void {
     try copyTrainingData(b);
     try buildTesseract();
 
-    const lib = b.addStaticLibrary(.{
-        .name = "leptonica",
-        .target = target,
-        .root_source_file = .{ .path = "/opt/homebrew/Cellar/leptonica/1.82.0_2/include/leptonica/allheaders.h" },
-        .optimize = optimize,
-    });
-    _ = lib;
-
-    const tesseract_lib = b.addStaticLibrary(.{
-        .name = "tesseract",
-        .target = target,
-        .root_source_file = .{ .path = "deps/tesseract/src" },
-        .optimize = optimize,
-    });
-    _ = tesseract_lib;
-
     const exe = b.addExecutable(.{
         .name = "newest_zig",
         // In this case the main source file is merely a path, however, in more
@@ -70,68 +54,18 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-
-    // const build_tesseract = b.addSystemCommand(
-    //  &[_][]const u8{
-    //     "make",
-    //     "-C",
-    //     "./libs/cmark",
-    // },
-    //);
-
-    //const make_step = b.step("tesseract", "Build tesseract");
-    //make_step.dependOn(&build_tesseract.step);
-
-    //add the enviroment variable
-    //
-    // export TESSDATA_PREFIX="/opt/homebrew/Cellar/tesseract-lang/4.1.0/share/tessdata"
-    // export TESSDATA_PREFIX=/opt/local/share/tessdata (for macports)
-    //github for arabic data: https://github.com/ClearCypher/enhancing-tesseract-arabic-text-recognition.git
-    //interesting research paper on improving arabic ocr https://www.researchgate.net/publication/372507862_Advancing_Arabic_Text_Recognition_Fine-tuning_of_the_LSTM_Model_in_Tesseract_OCR?channel=doi&linkId=64bb096a8de7ed28bab5fe3b&showFulltext=true
-
     exe.linkLibC();
     exe.addSystemIncludePath(std.build.LazyPath.relative("deps/tesseract/include"));
     exe.addLibraryPath(std.build.LazyPath.relative("deps/tesseract/src"));
     exe.linkSystemLibrary("tesseract");
 
-    //exe.addSystemIncludePath("deps/leptonica/src");
-    //exe.addLibraryPath("deps/leptonica/src");
-    exe.linkSystemLibrary("leptonica");
-
     // exe.linkSystemLibrary("magick");
     exe.linkSystemLibrary("MagickWand");
 
     exe.linkSystemLibrary("MagickCore");
-    //exe.addObjectFile("/usr/local/lib/libMagickWand-7.Q16HDRI.la");
-    //exe.linkSystemLibrary("libMagickWand-7");
-    //exe.addSystemIncludePath("/opt/local/include/");
-    //exe.addLibraryPath("/opt/local/lib");
-
-    //b.vcpkg_root = std.Build.VcpkgRoot{ .found = "./vcpkg" };
-    //exe.addIncludePath("./vcpkg/installed/arm64-osx/include");
-    //exe.addLibraryPath("./vcpkg/installed/arm64-osx/lib");
-    //exe.addIncludePath("vcpkg/installed/x64-osx/include");
-    //exe.addLibraryPath("vcpkg/installed/x64-osx/lib");
-    //exe.linkSystemLibrary("tesseract");
-    //exe.linkSystemLibrary("leptonica");
-
-    //exe.addIncludePath("./deps/tesseract/include");
-    //exe.addLibraryPath("./deps/tesseract/src");
-    //exe.addIncludePath("./deps/leptonica/src");
-    //exe.addLibraryPath("./deps/leptonica/src");
-    //exe.linkSystemLibrary("tesseract");
-    //exe.addLibraryPath("./deps/tesseract/lib");
-    //exe.linkSystemLibrary("tesseract"); //linking tesseract system library works!!!
-    //exe.addSystemIncludePath("/opt/homebrew/Cellar/leptonica/1.82.0_2/include/");
-    //exe.addLibraryPath("/opt/homebrew/Cellar/leptonica/1.82.0_2/lib/");
-    //exe.linkSystemLibrary("leptonica");
 
     exe.addSystemIncludePath(std.build.LazyPath{ .cwd_relative = "/opt/local/include/" }); //macport paths
     exe.addLibraryPath(std.build.LazyPath{ .cwd_relative = "/opt/local/lib" }); //macport paths
-    //exe.addSystemIncludePath("/opt/local/include");
-
-    //exe.addSystemIncludePath("/opt/homebrew/Cellar/imagemagick/7.1.1-14/include/");
-    //exe.linkSystemLibrary("imagemagick");
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -142,8 +76,7 @@ pub fn build(b: *std.Build) !void {
     // step is evaluated that depends on it. The next line below will establish
     // such a dependency.
     const run_cmd = b.addRunArtifact(exe);
-    const homebrew_tessdata_path = "/opt/homebrew/Cellar/tesseract-lang/4.1.0/share/tessdata";
-    _ = homebrew_tessdata_path;
+
     const local_tessdata_path = "./deps/tesseract/tessdata";
     //Allow tesseract to pull from it's language data
     run_cmd.setEnvironmentVariable("TESSDATA_PREFIX", local_tessdata_path);
