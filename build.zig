@@ -3,9 +3,7 @@ const std = @import("std");
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
-pub fn copyTrainingData(b: *std.Build) !void {
-    _ = b;
-    //const write_file: *std.build.Step.WriteFile = std.build.Step.WriteFile.create(b);
+pub fn copyTrainingData() !void {
     const cwd = std.fs.cwd();
     const trained_data = "./ara.traineddata";
     const arabic_training_package: std.fs.Dir = cwd.openDir("./deps/enhancing-tesseract-arabic-text-recognition", .{}) catch |err| {
@@ -17,11 +15,8 @@ pub fn copyTrainingData(b: *std.Build) !void {
         return err;
     };
     try std.fs.Dir.copyFile(arabic_training_package, trained_data, tesseract_training_data, trained_data, .{});
-    //const file = std.build.Step.WriteFile.addCopyFile(write_file, .{ .path = arabic_training_data_source }, tesseract_training_data_destination);
-    //std.debug.print("The file source is {s} \n", .{std.Build.GeneratedFile.getPath(file.generated.*)});
 }
 pub fn buildTesseract() !void {
-    //const build_dir: std.fs.Dir = try std.fs.Dir.openDir(std.fs.cwd(), "./deps/tesseract", .{});
     const cwd: std.fs.Dir = std.fs.cwd();
     if (cwd.makeDir("deps/tesseract/build")) |_| {
         const build_dir = try cwd.openDir("deps/tesseract/build", .{});
@@ -43,7 +38,7 @@ pub fn build(b: *std.Build) !void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    try copyTrainingData(b);
+    try copyTrainingData();
     try buildTesseract();
 
     const exe = b.addExecutable(.{
