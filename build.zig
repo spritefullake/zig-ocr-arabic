@@ -54,9 +54,7 @@ pub fn build(b: *std.Build) !void {
     exe.addLibraryPath(std.build.LazyPath.relative("deps/tesseract/src"));
     exe.linkSystemLibrary("tesseract");
 
-    // exe.linkSystemLibrary("magick");
     exe.linkSystemLibrary("MagickWand");
-
     exe.linkSystemLibrary("MagickCore");
 
     exe.addSystemIncludePath(std.build.LazyPath{ .cwd_relative = "/opt/local/include/" }); //macport paths
