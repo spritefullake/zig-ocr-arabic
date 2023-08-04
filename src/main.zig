@@ -1,4 +1,6 @@
 const std = @import("std");
+const time = std.time;
+const nanoseconds_in_a_second = @as(f64, std.math.pow(u64, 10, 9));
 const tesseract = @cImport({
     @cInclude("tesseract/capi.h");
 });
@@ -56,7 +58,7 @@ fn mypixaReadMultipageTiff(allocator: std.mem.Allocator, image_path: []const u8)
 
     return pixa_ptr;
 }
-fn pdfToImageIntermediate(input_pdf: [*c]const u8, output_image: [*c]const u8) i32 {
+fn pdfToImageIntermediate(input_pdf: [*c]const u8, output_image: [*c]const u8) void {
     var mw: ?*magick_wand.MagickWand = null;
     magick_wand.MagickWandGenesis();
     defer magick_wand.MagickWandTerminus();
@@ -89,28 +91,13 @@ fn pdfToImageIntermediate(input_pdf: [*c]const u8, output_image: [*c]const u8) i
         _ = magick_wand.DestroyMagickWand(mw);
         _ = magick_wand.DestroyPixelWand(color.?);
     }
-    return i;
 }
-pub fn main() !void {
-    //setup printing
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-    //create the allocator
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
-    const input_image = "./data-out/second.tiff";
-    const input_pdf = "./test_pdf_arabic_short.pdf";
-
-    const pages = pdfToImageIntermediate(input_pdf, "./data-out/second.tiff");
-
+fn imageIntermediateToPdf(input_image: [*c]const u8, output_pdf_path: [*c]const u8) void {
     //setup the tesseract api handle
     const api = TessBaseAPICreate();
     const tessdata_path = "./deps/tesseract/tessdata";
     _ = TessBaseAPIInit3(api, tessdata_path, "ara");
-    //TessBaseAPIReadConfigFile(api, "./pdf_config.txt");
+    TessBaseAPIReadConfigFile(api, "./pdf_config.txt");
     defer {
         TessBaseAPIDelete(api);
         TessBaseAPIEnd(api);
@@ -119,88 +106,36 @@ pub fn main() !void {
     const timeout_ms: c_int = 20000;
     const retry_config: ?*const u8 = null;
 
-    const output_path = "./data-out/output";
+    const output_path = output_pdf_path;
     const text_only = 0; //aka false
-    //TessAltoRendererCreate(output_path);
+
     const renderer = TessPDFRendererCreate(output_path, tessdata_path, text_only); //zero is important so we make the text appear visible
-    _ = TessBaseAPIProcessPages(api, "data-out/second.tiff", retry_config, timeout_ms, renderer);
-    //const renderer2 = TessPDFRendererCreate("data-out/output_renderer2", tessdata_path, text_only);
-    //_ = TessBaseAPISetImage2(api, pixRead("./data-out/intermediate_output-7.png"));
-    //_ = TessResultRendererAddImage(renderer, api);
-    //_ = TessBaseAPISetImage2(api, pixRead("./data-out/intermediate_output-8.png"));
-    //_ = TessResultRendererAddImage(renderer, api);
-    //_ = TessResultRendererEndDocument(renderer);
-    //_ = TessBaseAPIProcessPages(api, "data-out/second-9.png", retry_config, timeout_ms, renderer2);
+    _ = TessBaseAPIProcessPages(api, input_image, retry_config, timeout_ms, renderer);
+}
+pub fn main() !void {
 
-    if (false) {
-        var k: usize = 0;
-        while (k < pages) {
-            const image_file_name = try std.fmt.allocPrint(allocator, "data-out/second-{}.png", .{k});
-            const output_file_name = try std.fmt.allocPrint(allocator, "data-out/final-{}", .{k});
+    //setup printing
+    const stdout_file = std.io.getStdOut().writer();
+    var bw = std.io.bufferedWriter(stdout_file);
+    const stdout = bw.writer();
+    _ = stdout;
+    //create the allocator
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
-            std.debug.print("output_file_name: {s}\n", .{output_file_name});
-            std.debug.print("image_file_name: {s}\n\n", .{image_file_name});
+    //start timing
+    const timer = try allocator.create(time.Timer);
+    timer.* = try time.Timer.start();
 
-            const i_renderer = TessPDFRendererCreate(@ptrCast(output_file_name), tessdata_path, text_only);
-            _ = TessBaseAPIProcessPages(api, @ptrCast(image_file_name), retry_config, timeout_ms, i_renderer);
-            //const out_text = TessBaseAPIGetUTF8Text(api.?);
-            //try stdout.print("The out text is {s}\n", .{out_text});
-            //_ = TessBaseAPIProcessPage(api, pixRead(@ptrCast(image_file_name)), @intCast(k), @ptrCast(output_file_name), retry_config, timeout_ms, @ptrCast(renderer));
+    const input_pdf = "./test_pdf_arabic_short.pdf";
+    const intermediate_image = "./data-out/second.tiff";
+    pdfToImageIntermediate(input_pdf, intermediate_image);
+    imageIntermediateToPdf(intermediate_image, "./data-out/output");
 
-            TessDeleteResultRenderer(i_renderer);
-            k += 1;
-        }
-        //_ = TessBaseAPIProcessPages(@ptrCast(api), input_image, retry_config, timeout_ms, renderer);
-    }
+    const elapsed = @as(f64, @floatFromInt(timer.read()));
 
-    if (false) {
-        const mw = undefined;
-        _ = magick_wand.MagickReadImage(mw.?, input_image);
-        const i = 0;
-        while (i < magick_wand.MagickGetNumberImages(mw)) {
-            _ = TessBaseAPISetImage2(api.?, pixReadTiff(input_image, @intCast(i)));
-            _ = tesseract.TessResultRendererAddImage(renderer, api.?);
-
-            i += 1;
-        }
-        _ = tesseract.TessResultRendererEndDocument(renderer);
-    }
-
-    if (false) {
-        const pixa = try mypixaReadMultipageTiff(allocator, input_image);
-        //const pixa: *Pixa = try pixaReadMultipageTiff(allocator, input_image);
-        const my_pixes: [*]*Pix = pixa.pix;
-        const total_pixes: usize = @intCast(pixa.n);
-        const slice: []*Pix = pixa.pix[0..total_pixes];
-        _ = slice;
-        std.debug.print("Pixa item number 1: {} \n", .{my_pixes[0].w});
-    }
-
-    //read in an image as pixel data
-    //convert image to text data
-    //TessBaseAPISetImage2(api.?, @as(?*Pix, image));
-
-    //_ = tesseract.TessBaseAPIProcessPages(api, input_image, retry_config, timeout_ms, renderer);
-    //_ = tesseract.TessBaseAPIProcessPages(api, input_image, retry_config, timeout_ms, renderer);
-    if (false) {
-        var j: i32 = 0;
-        while (j < pages) {
-            const page = pixReadTiff(input_image, @intCast(j));
-            //std.debug.print("THe details of page number {} with width {}", .{ j, &page.w });
-            _ = TessBaseAPISetImage2(api, page);
-            //const out_text: [*c]const u8 = TessBaseAPIGetUTF8Text(api);
-            //try stdout.print("The out text is {s}\n", .{out_text});
-            const i_renderer = TessPDFRendererCreate("./data-out/alternate", tessdata_path, text_only);
-            _ = TessBaseAPIProcessPage(api, page, j, input_image, retry_config, timeout_ms, i_renderer);
-            j += 1;
-            TessDeleteResultRenderer(i_renderer);
-        }
-    }
-
-    //const out_text: [*c]const u8 = tesseract.TessBaseAPIGetUTF8Text(api.?);
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-    //try stdout.print("The out text is {s}\n", .{out_text});
+    std.debug.print("Elapsed time is {d} seconds \n", .{elapsed / nanoseconds_in_a_second});
 
     try bw.flush(); // don't forget to flush!
 }
