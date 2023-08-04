@@ -121,6 +121,7 @@ pub fn main() !void {
     _ = stdout;
     //create the allocator
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+
     defer arena.deinit();
     const allocator = arena.allocator();
 

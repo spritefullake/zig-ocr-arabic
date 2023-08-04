@@ -90,8 +90,8 @@ pub fn build(b: *std.Build) !void {
     //interesting research paper on improving arabic ocr https://www.researchgate.net/publication/372507862_Advancing_Arabic_Text_Recognition_Fine-tuning_of_the_LSTM_Model_in_Tesseract_OCR?channel=doi&linkId=64bb096a8de7ed28bab5fe3b&showFulltext=true
 
     exe.linkLibC();
-    exe.addSystemIncludePath("deps/tesseract/include");
-    exe.addLibraryPath("deps/tesseract/src");
+    exe.addSystemIncludePath(std.build.LazyPath.relative("deps/tesseract/include"));
+    exe.addLibraryPath(std.build.LazyPath.relative("deps/tesseract/src"));
     exe.linkSystemLibrary("tesseract");
 
     //exe.addSystemIncludePath("deps/leptonica/src");
@@ -126,8 +126,8 @@ pub fn build(b: *std.Build) !void {
     //exe.addLibraryPath("/opt/homebrew/Cellar/leptonica/1.82.0_2/lib/");
     //exe.linkSystemLibrary("leptonica");
 
-    exe.addSystemIncludePath("/opt/local/include/"); //macport paths
-    exe.addLibraryPath("/opt/local/lib"); //macport paths
+    exe.addSystemIncludePath(std.build.LazyPath{ .cwd_relative = "/opt/local/include/" }); //macport paths
+    exe.addLibraryPath(std.build.LazyPath{ .cwd_relative = "/opt/local/lib" }); //macport paths
     //exe.addSystemIncludePath("/opt/local/include");
 
     //exe.addSystemIncludePath("/opt/homebrew/Cellar/imagemagick/7.1.1-14/include/");
