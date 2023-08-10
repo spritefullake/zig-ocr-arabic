@@ -53,12 +53,7 @@ pub fn build(b: *std.Build) !void {
     exe.addSystemIncludePath(std.build.LazyPath.relative("deps/tesseract/include"));
     exe.addLibraryPath(std.build.LazyPath.relative("deps/tesseract/src"));
     exe.linkSystemLibrary("tesseract");
-
     exe.linkSystemLibrary("MagickWand");
-    exe.linkSystemLibrary("MagickCore");
-
-    exe.addSystemIncludePath(std.build.LazyPath{ .cwd_relative = "/opt/local/include/" }); //macport paths
-    exe.addLibraryPath(std.build.LazyPath{ .cwd_relative = "/opt/local/lib" }); //macport paths
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
@@ -99,6 +94,11 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    unit_tests.linkLibC();
+    unit_tests.addSystemIncludePath(std.build.LazyPath.relative("deps/tesseract/include"));
+    unit_tests.addLibraryPath(std.build.LazyPath.relative("deps/tesseract/src"));
+    unit_tests.linkSystemLibrary("tesseract");
+    unit_tests.linkSystemLibrary("MagickWand");
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 
