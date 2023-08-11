@@ -54,7 +54,9 @@ pub fn build(b: *std.Build) !void {
     exe.addLibraryPath(std.build.LazyPath.relative("deps/tesseract/src"));
     exe.linkSystemLibrary("tesseract");
     exe.linkSystemLibrary("MagickWand");
-
+    //exe.addSystemIncludePath(std.build.LazyPath{ .cwd_relative = "deps/leptonica/src" }); //macport paths
+    //exe.addLibraryPath(std.build.LazyPath{ .cwd_relative = "deps/leptonica/src/.libs" }); //macport paths
+    //exe.linkSystemLibrary("leptonica");
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
