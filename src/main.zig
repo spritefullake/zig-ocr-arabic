@@ -58,49 +58,36 @@ fn imageToPdf(api: *TesseractAPI, tessdata_path: [*c]const u8, files: Pipe) !voi
     }
 }
 pub fn processArguments(allocator: std.mem.Allocator, input_file_arg1: ?[:0]const u8, output_file_arg2: ?[:0]const u8) ![2]*Pipe {
-    var input_file_image: []const u8 = undefined;
-    var input_file_pdf: []const u8 = undefined;
-    var output_file_image: []const u8 = undefined;
-    var output_file_pdf: []const u8 = undefined;
+    const input_file_pdf = try allocator.create([]const u8);
+    const output_file_image = try allocator.create([]const u8);
+    const input_file_image = try allocator.create([]const u8);
+    const output_file_pdf = try allocator.create([]const u8);
 
     if (input_file_arg1) |input_file| {
         const without_extension = std.fs.path.stem(input_file);
-        input_file_pdf = input_file;
-        output_file_image = try std.fmt.allocPrint(allocator, "./data-out/{s}.tiff\x00", .{without_extension});
-        input_file_image = output_file_image;
+        input_file_pdf.* = input_file;
+        output_file_image.* = try std.fmt.allocPrint(allocator, "./data-out/{s}.tiff\x00", .{without_extension});
+        input_file_image.* = output_file_image.*;
         if (output_file_arg2) |output_file| {
-            output_file_pdf = output_file;
+            output_file_pdf.* = output_file;
         } else {
             //performing null termination is very important with \x00 becuase we are writing
             //to a bigger buffer. Since strings in zig end in the zero-byte (\x00), we effectively
             //terminate the string after the .tiff part
 
-            input_file_image = output_file_image;
-            output_file_pdf = try std.fmt.allocPrint(allocator, "./data-out/{s}\x00", .{without_extension});
+            input_file_image.* = output_file_image.*;
+            output_file_pdf.* = try std.fmt.allocPrint(allocator, "./data-out/{s}\x00", .{without_extension});
         }
     } else {
         return error.NoInputFile;
     }
 
-    _ = allocator.dupe([]const u8, output_file_image);
-
-    const input_file_pdf_ptr = try allocator.create([]const u8);
-    const output_file_image_ptr = try allocator.create([]const u8);
-    const input_file_image_ptr = try allocator.create([]const u8);
-    const output_file_pdf_ptr = try allocator.create([]const u8);
-
-    input_file_pdf_ptr.* = input_file_pdf;
-    output_file_image_ptr.* = output_file_image;
-    input_file_image_ptr.* = output_file_image;
-    output_file_pdf_ptr.* = output_file_pdf;
-
     const pdf_to_image: *Pipe = try allocator.create(Pipe);
-    pdf_to_image.* = .{ .input = input_file_pdf_ptr.*, .output = output_file_image_ptr.* };
+    pdf_to_image.* = .{ .input = input_file_pdf.*, .output = output_file_image.* };
     const image_to_pdf: *Pipe = try allocator.create(Pipe);
-    image_to_pdf.* = .{ .input = output_file_image_ptr.*, .output = output_file_pdf_ptr.* };
-    std.debug.print("The output file image is {s}\n\n\n\n", .{output_file_image});
-    const res = [_]*Pipe{ pdf_to_image, image_to_pdf };
-    return res;
+    image_to_pdf.* = .{ .input = output_file_image.*, .output = output_file_pdf.* };
+    std.debug.print("The output file image is {s}\n\n\n\n", .{output_file_image.*});
+    return [_]*Pipe{ pdf_to_image, image_to_pdf };
 }
 pub fn main() !void {
     const config_file = "./pdf_config.txt";
@@ -139,8 +126,8 @@ pub fn main() !void {
     const timer = try allocator.create(time.Timer);
     timer.* = try time.Timer.start();
     //process files
-    std.debug.print("\n\n\n The input file pdf is {s}. Output file image is: {s}\n\n\n", .{ pipes[0].input.*, pipes[0].output.* });
-    //try pdfToImage(mw, pipes[0].*);
+    std.debug.print("\n\n\n The input file pdf is {s}. Output file image is: {s}\n\n\n", .{ pipes[0].input[0..], pipes[0].output[0..] });
+    try pdfToImage(mw, pipes[0].*);
     try imageToPdf(api, tessdata_path, pipes[1].*);
     //record total time
     const elapsed = @as(f64, @floatFromInt(timer.read()));
