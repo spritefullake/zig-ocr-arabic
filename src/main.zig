@@ -9,7 +9,7 @@ const magick_wand = @cImport({
 });
 const TesseractAPI = @TypeOf(tesseract.TessBaseAPICreate());
 const MagickWand = @TypeOf(magick_wand.NewMagickWand());
-const Pipe = struct { input: ?[:0]const u8 = null, output: ?[:0]const u8 = null };
+const Pipe = struct { input: []const u8, output: []const u8 };
 fn boolFromCUInt(i: usize) bool {
     return switch (i) {
         0 => false,
@@ -22,30 +22,22 @@ fn getMagickWandHandle(allocator: std.mem.Allocator) !*MagickWand {
     return mw;
 }
 fn pdfToImage(mw: *MagickWand, files: Pipe) !void {
-    const res = magick_wand.MagickReadImage(mw.*, files.input.?);
+    _ = magick_wand.MagickSetResolution(mw.*, 200, 200);
+    const res = magick_wand.MagickReadImage(mw.*, @ptrCast(files.input));
     if (boolFromCUInt(@as(usize, res)) == false) {
         return error.FileNotFound;
     }
     //very important to use the .MagickSet methods WITHOUT putting the word Image in between them
     // by ONLY using .MagickSet, we can apply global settings
     // Turns out .tiff file compression and downscaling is very important to the functioning of tesseract
+
+    // = magick_wand.MagickSetResolution(mw.*, 500, 500);
     const compressionStatus = magick_wand.MagickSetCompression(mw.*, magick_wand.JPEGCompression);
     _ = magick_wand.MagickSetCompressionQuality(mw.*, 100);
     _ = magick_wand.MagickSetDepth(mw.*, 8);
     _ = compressionStatus;
-    var output: []const u8 = undefined;
-    if (files.output == null) {
-        const without_extension = std.fs.path.stem(files.input.?);
-        var buffer: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-        //performing null termination is very important with \x00 becuase we are writing
-        //to a bigger buffer. Since strings in zig end in the zero-byte (\x00), we effectively
-        //terminate the string after the .tiff part
-        const new_name = try std.fmt.bufPrint(&buffer, "./data-out/{s}.tiff\x00", .{without_extension});
-        output = new_name;
-    } else {
-        output = files.output.?;
-    }
-    _ = magick_wand.MagickWriteImages(mw.*, @ptrCast(output), magick_wand.MagickTrue);
+    _ = magick_wand.MagickWriteImages(mw.*, @ptrCast(files.output), magick_wand.MagickTrue);
+    std.debug.print("All done with pdf to image \n", .{});
 }
 fn getTesseractHandle(allocator: std.mem.Allocator, tessdata_path: [*c]const u8, config_file: [*c]const u8) !*TesseractAPI {
     //setup the tesseract api handle
@@ -58,47 +50,78 @@ fn getTesseractHandle(allocator: std.mem.Allocator, tessdata_path: [*c]const u8,
 fn imageToPdf(api: *TesseractAPI, tessdata_path: [*c]const u8, files: Pipe) !void {
     const timeout_ms: c_int = 20000;
     const retry_config: ?*const u8 = null;
-    var memory: [std.fs.MAX_PATH_BYTES]u8 = undefined;
-    var buffer: []u8 = &memory;
-    var input: []const u8 = undefined;
-    if (files.input != null) {
-        const without_extension = std.fs.path.stem(files.input.?);
-        const new_input_name = try std.fmt.bufPrint(buffer, "./data-out/{s}.tiff\x00", .{without_extension});
-        input = new_input_name;
-    }
-    buffer = buffer[input.len..];
-    var output: []const u8 = undefined;
-    if (files.output == null and files.input != null) {
-        const new_output_name = try std.fmt.bufPrint(buffer, "./data-out/{s}\x00", .{std.fs.path.stem(files.input.?)});
-        output = new_output_name;
-    } else {
-        output = files.output.?;
-    }
-
     const text_only = 0; //aka false
-    const renderer = tesseract.TessPDFRendererCreate(@ptrCast(output), tessdata_path, text_only); //zero is important so we make the text appear visible
-    const res = tesseract.TessBaseAPIProcessPages(api.*, @ptrCast(input), retry_config, timeout_ms, renderer);
+    const renderer = tesseract.TessPDFRendererCreate(@ptrCast(files.output), tessdata_path, text_only); //zero is important so we make the text appear visible
+    const res = tesseract.TessBaseAPIProcessPages(api.*, @ptrCast(files.input), retry_config, timeout_ms, renderer);
     if (@as(usize, @intCast(res)) == 0) {
         return error.FileNotFound;
     }
 }
+pub fn processArguments(allocator: std.mem.Allocator, input_file_arg1: ?[:0]const u8, output_file_arg2: ?[:0]const u8) ![2]*Pipe {
+    var input_file_image: []const u8 = undefined;
+    var input_file_pdf: []const u8 = undefined;
+    var output_file_image: []const u8 = undefined;
+    var output_file_pdf: []const u8 = undefined;
+
+    if (input_file_arg1) |input_file| {
+        const without_extension = std.fs.path.stem(input_file);
+        input_file_pdf = input_file;
+        output_file_image = try std.fmt.allocPrint(allocator, "./data-out/{s}.tiff\x00", .{without_extension});
+        input_file_image = output_file_image;
+        if (output_file_arg2) |output_file| {
+            output_file_pdf = output_file;
+        } else {
+            //performing null termination is very important with \x00 becuase we are writing
+            //to a bigger buffer. Since strings in zig end in the zero-byte (\x00), we effectively
+            //terminate the string after the .tiff part
+
+            input_file_image = output_file_image;
+            output_file_pdf = try std.fmt.allocPrint(allocator, "./data-out/{s}\x00", .{without_extension});
+        }
+    } else {
+        return error.NoInputFile;
+    }
+
+    _ = allocator.dupe([]const u8, output_file_image);
+
+    const input_file_pdf_ptr = try allocator.create([]const u8);
+    const output_file_image_ptr = try allocator.create([]const u8);
+    const input_file_image_ptr = try allocator.create([]const u8);
+    const output_file_pdf_ptr = try allocator.create([]const u8);
+
+    input_file_pdf_ptr.* = input_file_pdf;
+    output_file_image_ptr.* = output_file_image;
+    input_file_image_ptr.* = output_file_image;
+    output_file_pdf_ptr.* = output_file_pdf;
+
+    const pdf_to_image: *Pipe = try allocator.create(Pipe);
+    pdf_to_image.* = .{ .input = input_file_pdf_ptr.*, .output = output_file_image_ptr.* };
+    const image_to_pdf: *Pipe = try allocator.create(Pipe);
+    image_to_pdf.* = .{ .input = output_file_image_ptr.*, .output = output_file_pdf_ptr.* };
+    std.debug.print("The output file image is {s}\n\n\n\n", .{output_file_image});
+    const res = [_]*Pipe{ pdf_to_image, image_to_pdf };
+    return res;
+}
 pub fn main() !void {
     const config_file = "./pdf_config.txt";
     const tessdata_path = "./deps/tesseract/tessdata";
+    //create the allocator
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const allocator = arena.allocator();
     //setup printing
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
     _ = stdout;
-
+    var args = try std.process.argsWithAllocator(allocator);
+    _ = args.skip(); //skip program name argument
+    var input_file_arg1: ?[:0]const u8 = args.next();
+    var output_file_arg2: ?[:0]const u8 = args.next();
+    const pipes = try processArguments(allocator, input_file_arg1, output_file_arg2);
     if (false) {
         std.debug.print("THE MY FN IS {}\n", .{myFn});
         return;
     }
-    //create the allocator
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    //defer arena.deinit();
-    const allocator = arena.allocator();
     //setup imagemagick
     magick_wand.MagickWandGenesis();
     //get library api handles
@@ -115,23 +138,10 @@ pub fn main() !void {
     //start timing
     const timer = try allocator.create(time.Timer);
     timer.* = try time.Timer.start();
-
-    var args = std.process.args();
-    _ = args.next();
-    var user_args: [2]?[:0]const u8 = undefined;
-    var n: usize = 0;
-    while (n < user_args.len) {
-        const item = args.next();
-        user_args[n] = item;
-        n += 1;
-    }
-
-    std.debug.print("The input arg is {?s} and output is {?s}\n", .{ user_args[0], user_args[1] });
     //process files
-    //const intermediate_image = "./data-out/intermediate.tiff";
-
-    try pdfToImage(mw, .{ .input = user_args[0] });
-    try imageToPdf(api, tessdata_path, .{ .input = user_args[0], .output = user_args[1] });
+    std.debug.print("\n\n\n The input file pdf is {s}. Output file image is: {s}\n\n\n", .{ pipes[0].input.*, pipes[0].output.* });
+    //try pdfToImage(mw, pipes[0].*);
+    try imageToPdf(api, tessdata_path, pipes[1].*);
     //record total time
     const elapsed = @as(f64, @floatFromInt(timer.read()));
     std.debug.print("Elapsed time is {d} seconds \n", .{elapsed / nanoseconds_in_a_second});
